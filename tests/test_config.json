@@ -1,0 +1,14 @@
+{
+	"forwarders": {
+		"::1": {
+			"22222": {
+				"tcp": {
+					"proto": "tcp",
+					"host": "github.com",
+					"port": 22
+				}
+			}
+		}
+	},
+	"logFile": "./venv/log.txt"
+}
