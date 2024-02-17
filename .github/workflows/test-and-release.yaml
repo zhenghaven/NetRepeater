@@ -45,7 +45,7 @@ jobs:
         python3 -m GitHubApiHelper --auth-token \
           api_tags_latest_ver \
             --repo ${{ github.repository }} \
-            -l $(python3 -m NetRepeater version) \
+            -l $(python3 -m NetRepeater --version) \
             --github-out
 
     - name: Create tag
