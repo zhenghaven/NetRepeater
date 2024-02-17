@@ -1,0 +1,62 @@
+name: test_and_release
+
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+
+jobs:
+  test_and_release:
+    name: Unit Testing and then Release
+
+    strategy:
+      matrix:
+        os: [ ubuntu-22.04 ]
+        python-version: [ 3.11 ]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Installing Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Test setup.py
+      working-directory: ${{ github.workspace }}
+      run: |
+        python3 -m pip install ${{ github.workspace }}
+
+    - name: Installing GitHubApiHelper
+      run: |
+        python3 -m pip install git+https://github.com/zhenghaven/GitHubApiHelper.git@v0.1.1
+
+    - name: Get latest version
+      id: latest_ver
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        python3 -m GitHubApiHelper --auth-token \
+          api_tags_latest_ver \
+            --repo ${{ github.repository }} \
+            -l $(python3 -m NetRepeater version) \
+            --github-out
+
+    - name: Create tag
+      if: ${{ startsWith(github.ref, 'refs/heads/main') && steps.latest_ver.outputs.remote != steps.latest_ver.outputs.all }}
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.git.createRef({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            ref: 'refs/tags/${{ steps.latest_ver.outputs.allV }}',
+            sha: context.sha
+          })
+
