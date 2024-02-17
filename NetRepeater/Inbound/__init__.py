@@ -10,12 +10,11 @@
 
 import socketserver
 import typing
-import typing_extensions
 
 from . import TCP
 
 
-InboundServerCreator : typing_extensions.TypeAlias = typing.Callable[[typing.Any], socketserver.BaseServer]
+InboundServerCreator = typing.Callable[[typing.Any], socketserver.BaseServer]
 
 
 INBOUND_SERVER_CREATOR_MAP : typing.Dict[str, InboundServerCreator] = {

@@ -11,18 +11,13 @@
 import logging
 import socket
 
-from typing_extensions import TypeAlias
-
-
-ReadableBuffer: TypeAlias = bytes
-
 
 class Handler(object):
 
 	def __init__(self) -> None:
 		super(Handler, self).__init__()
 
-	def sendall(self, data: ReadableBuffer) -> None:
+	def sendall(self, data: bytes) -> None:
 		raise NotImplementedError('Send() is not implemented')
 
 	def fileno(self) -> int:
@@ -48,7 +43,7 @@ class SocketHandler(Handler):
 		self.sock = sock
 		self.peername = self.sock.getpeername()
 
-	def sendall(self, data: ReadableBuffer) -> None:
+	def sendall(self, data: bytes) -> None:
 		self.sock.sendall(data)
 
 	def fileno(self) -> int:

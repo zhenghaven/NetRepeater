@@ -13,7 +13,6 @@ import json
 import logging
 
 from typing import Any, Dict
-from typing_extensions import TypeAlias
 
 from .Inbound import FindInboundServerCreator
 from .Outbound import FindOutboundConnector
@@ -21,10 +20,10 @@ from . import _Meta
 from . import ServerCluster
 
 
-RemoteHostConfig: TypeAlias = Dict[str, Any]
-LocalProtoToRemoteHostConfig: TypeAlias = Dict[str, RemoteHostConfig]
-LocalPortToRemoteHostConfig: TypeAlias = Dict[int, LocalProtoToRemoteHostConfig]
-LocalHostToRemoteHostConfig: TypeAlias = Dict[str, LocalPortToRemoteHostConfig]
+RemoteHostConfig = Dict[str, Any]
+LocalProtoToRemoteHostConfig = Dict[str, RemoteHostConfig]
+LocalPortToRemoteHostConfig = Dict[int, LocalProtoToRemoteHostConfig]
+LocalHostToRemoteHostConfig = Dict[str, LocalPortToRemoteHostConfig]
 
 
 def main() -> int:
