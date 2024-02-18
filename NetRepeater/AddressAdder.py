@@ -12,6 +12,7 @@ import ipaddress
 import logging
 import subprocess
 import sys
+import time
 
 from typing import List
 
@@ -26,6 +27,8 @@ class AddressAdder(object):
 		if proc.returncode != 0:
 			cmdStr = ' '.join(cmd)
 			raise RuntimeError(f'Command "{cmdStr}" failed with return code {proc.returncode}')
+
+		time.sleep(2) # Wait for the settings to take effect
 
 	def __init__(self, dev: str) -> None:
 		super(AddressAdder, self).__init__()

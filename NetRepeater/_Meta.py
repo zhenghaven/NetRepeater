@@ -8,7 +8,7 @@
 ###
 
 
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 
 PKG_AUTHOR = 'Haofan Zheng'
 PKG_NAME = 'NetRepeater'
