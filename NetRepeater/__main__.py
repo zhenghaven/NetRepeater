@@ -17,6 +17,7 @@ from typing import Any, Dict
 from .Inbound import FindInboundServerCreator
 from .Outbound import FindOutboundConnector
 from . import _Meta
+from . import AddressAdder
 from . import ServerCluster
 
 
@@ -57,6 +58,13 @@ def main() -> int:
 		format=logFormat,
 		filename=logFile
 	)
+
+	# Add addresses to the devices first if specified
+	# otherwise, the servers below will fail to bind to the addresses
+	if 'addAddress' in config:
+		for dev, addrs in config['addAddress'].items():
+			addrAdder = AddressAdder.AddressAdder(dev)
+			addrAdder.AddAddresses(addrs)
 
 	svrCluster = ServerCluster.ServerCluster()
 
