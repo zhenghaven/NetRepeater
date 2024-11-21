@@ -12,6 +12,8 @@ import argparse
 
 from ModularDNS.Service import Resolver
 
+from .DNS import ModuleManagerLoader
+
 
 def GetPackageInfo() -> dict:
 	import os
