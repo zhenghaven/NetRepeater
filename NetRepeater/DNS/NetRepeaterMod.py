@@ -9,6 +9,7 @@
 
 
 import ipaddress
+import logging
 
 from typing import List, Tuple, Union
 
@@ -124,6 +125,8 @@ class ServerManagerMod(_BaseQuickLookup):
 
 		self._ansTTL = 60
 
+		self._logger = logging.getLogger(f'{__name__}.{self.__class__.__name__}')
+
 	def HandleQuestion(
 		self,
 		msgEntry: _DNSQuestionEntry,
@@ -139,22 +142,24 @@ class ServerManagerMod(_BaseQuickLookup):
 
 		if msgEntry.rdCls != dns.rdataclass.IN:
 			# we don't support other classes
-			raise _DNSExceptions.DNSZeroAnswerError(domain)
+			self._logger.debug(f'Unsupported class: {dns.rdataclass.to_text(msgEntry.rdCls)}')
+			raise _DNSExceptions.DNSNameNotFoundError(domain, 'NetRepeaterMod')
 
-		if msgEntry.rdType != self._supportedRDType:
+		if msgEntry.rdType not in [dns.rdatatype.A, dns.rdatatype.AAAA]:
 			# we don't support other types
-			raise _DNSExceptions.DNSZeroAnswerError(domain)
+			self._logger.debug(f'Unsupported type: {dns.rdatatype.to_text(msgEntry.rdType)}')
+			raise _DNSExceptions.DNSNameNotFoundError(domain, 'NetRepeaterMod')
 
 		repeaterIP = self._serverManager.LookupOrCreateServer(domain)
 
 		ans = _DNSAnsEntry(
 			name=msgEntry.name,
 			rdCls=msgEntry.rdCls,
-			rdType=msgEntry.rdType,
+			rdType=self._supportedRDType,
 			dataList=[
 				dns.rdata.from_text(
 					rdclass=msgEntry.rdCls,
-					rdtype=msgEntry.rdType,
+					rdtype=self._supportedRDType,
 					tok=str(repeaterIP),
 				)
 			],
