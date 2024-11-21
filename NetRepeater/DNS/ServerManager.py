@@ -153,6 +153,9 @@ class ServerItem(KeyValueItem):
 		)
 		self._ipMgr.AddIP(waitConfirm=True)
 
+		# add a delay to ensure the address is added and ready
+		self._ipMgr.DelayAfterAdd()
+
 		# create services
 		self._services: List[ServiceItem] = []
 		for protoPort in self._protoAndPorts:

@@ -31,6 +31,7 @@ class IPManager(object):
 		cls,
 		ip: _IP_ADDRESS_TYPES,
 		iface: str,
+		logger: Union[logging.Logger, None] = None,
 	) -> bool:
 		ifaceAddrs = netifaces.ifaddresses(iface)
 
@@ -43,6 +44,8 @@ class IPManager(object):
 
 		for addrObj in ifaceAddrs.get(af, []):
 			if addrObj['addr'] == str(ip):
+				if logger:
+					logger.debug(f'Found IP {addrObj} on interface {iface}')
 				return True
 
 		return False
@@ -70,11 +73,15 @@ class IPManager(object):
 		iface: str,
 		timeout: float,
 		pollInterval: float = _DEFAULT_POLL_INTERVAL,
+		logger: Union[logging.Logger, None] = None,
 	) -> None:
+		def _HasInterfaceIP(ip: _IP_ADDRESS_TYPES, iface: str) -> bool:
+			return cls.HasInterfaceIP(ip, iface, logger=logger)
+
 		cls.WaitInterfaceIP(
 			ip=ip,
 			iface=iface,
-			condition=cls.HasInterfaceIP,
+			condition=_HasInterfaceIP,
 			timeout=timeout,
 			pollInterval=pollInterval,
 		)
@@ -86,9 +93,10 @@ class IPManager(object):
 		iface: str,
 		timeout: float,
 		pollInterval: float = _DEFAULT_POLL_INTERVAL,
+		logger: Union[logging.Logger, None] = None,
 	) -> None:
 		def _HasNotInterfaceIP(ip: _IP_ADDRESS_TYPES, iface: str) -> bool:
-			return not cls.HasInterfaceIP(ip, iface)
+			return not cls.HasInterfaceIP(ip, iface, logger=logger)
 
 		cls.WaitInterfaceIP(
 			ip=ip,
@@ -146,6 +154,7 @@ class IPManager(object):
 			iface=self.iface,
 			timeout=timeout,
 			pollInterval=pollInterval,
+			logger=self.logger,
 		)
 
 	def WaitIPRemoved(
@@ -158,7 +167,12 @@ class IPManager(object):
 			iface=self.iface,
 			timeout=timeout,
 			pollInterval=pollInterval,
+			logger=self.logger,
 		)
+
+	def DelayAfterAdd(self, delay: Union[float, None] = None) -> None:
+		if delay:
+			time.sleep(delay)
 
 
 class IPManagerLinux(IPManager):
@@ -220,6 +234,11 @@ class IPManagerLinux(IPManager):
 		waitConfirm: bool = True,
 	) -> None:
 		super(IPManagerLinux, self)._AddIP()
+		if self.HasIPAdded():
+			self.logger.warning(
+				f'IP {self.ipAndNet} already exists on interface {self.iface}'
+			)
+			return
 		self._RunSysCmdToAddIP(self.ipAndNet, self.iface)
 		if waitConfirm:
 			self.WaitIPAdded(timeout=5.0)
@@ -229,9 +248,20 @@ class IPManagerLinux(IPManager):
 		waitConfirm: bool = True,
 	) -> None:
 		super(IPManagerLinux, self)._RemoveIP()
+		if not self.HasIPAdded():
+			self.logger.warning(
+				f'IP {self.ipAndNet} does not exist on interface {self.iface}'
+			)
+			return
 		self._RunSysCmdToRemoveIP(self.ipAndNet, self.iface)
 		if waitConfirm:
 			self.WaitIPRemoved(timeout=5.0)
+
+	def DelayAfterAdd(self, delay: Union[float, None] = None) -> None:
+		if delay:
+			time.sleep(delay)
+		else:
+			time.sleep(0.5)
 
 
 class IPManagerLinuxDryRun(IPManagerLinux):
@@ -243,6 +273,7 @@ class IPManagerLinuxDryRun(IPManagerLinux):
 		cls,
 		ip: _IP_ADDRESS_TYPES,
 		iface: str,
+		logger: Union[logging.Logger, None] = None,
 	) -> bool:
 		ifaceAddrs = cls._IP_LIST.get(iface, [])
 
