@@ -8,34 +8,65 @@
 ###
 
 
+import ipaddress
 import logging
 import socket
+
+from typing import Callable, Union
 
 from .Handler import HandlerConnector, SocketHandler
 
 
-class TCPConnector(HandlerConnector):
+_IP_ADDRESS_TYPES = Union[ ipaddress.IPv4Address, ipaddress.IPv6Address ]
+
+
+class TCPwDynamicIPConnector(HandlerConnector):
 
 	def __init__(
 		self,
-		host: str,
+		hostName: str,
 		port: int,
-		*args, **kwargs
+		addrLookup: Callable[[str], _IP_ADDRESS_TYPES],
 	) -> None:
-		super(TCPConnector, self).__init__()
+		super(TCPwDynamicIPConnector, self).__init__()
 
-		self.host = host
+		self.hostName = hostName
 		self.port = port
-		self.hostAddrStr = f'{host}:{port}'
+		self.addrLookup = addrLookup
+
+		self.hostAddrStr = f'{self.hostName}:{self.port}'
 		self.logger = logging.getLogger(
 			f'{__name__}.{self.__class__.__name__}.{self.hostAddrStr}'
 		)
 
 	def Connect(self) -> SocketHandler:
-		sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		ipAddr = self.addrLookup(self.hostName)
+		if ipAddr.version == 4:
+			af = socket.AF_INET
+		elif ipAddr.version == 6:
+			af = socket.AF_INET6
+		else:
+			raise ValueError(f'Unknown IP address version: {ipAddr.version}')
+		ipAddrStr = str(ipAddr)
+
+		sock = socket.socket(af, socket.SOCK_STREAM)
 		# set TCP_NODELAY to disable Nagle's algorithm
 		sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-		sock.connect((self.host, self.port))
+		sock.connect((ipAddrStr, self.port))
 
 		return SocketHandler(sock, logger=self.logger)
+
+
+class TCPwStaticIPConnector(TCPwDynamicIPConnector):
+
+	def __init__(
+		self,
+		ipAddr: _IP_ADDRESS_TYPES,
+		port: int,
+	) -> None:
+		super(TCPwStaticIPConnector, self).__init__(
+			str(ipAddr),
+			port,
+			lambda _: ipAddr
+		)
 

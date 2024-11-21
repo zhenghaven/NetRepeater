@@ -7,3 +7,17 @@
 # https://opensource.org/licenses/MIT.
 ###
 
+
+import sys
+import unittest
+
+
+from . import TestModules
+
+
+def main() -> None:
+	unittest.main(
+		module=TestModules,
+		argv=[ sys.argv[0], '-v', ],
+	)
+
