@@ -8,36 +8,30 @@
 ###
 
 
-import ipaddress
-import logging
 import selectors
 import socket
 import socketserver
-import threading
+
+from  ModularDNS.Server.Server import FromPySocketServer
 
 from ..Outbound import Handler
+from .Server import Server as _Server
+from .Utils import (
+	_IP_ADDRESS_TYPES,
+	CreateServer as _CreateServer,
+)
 
 
 class TCPHandler(socketserver.StreamRequestHandler):
 	disable_nagle_algorithm = True
 
-	def GetOutboundConnector(self) -> Handler.HandlerConnector:
-		raise NotImplementedError('GetOutboundConnector() is not implemented')
-
-	def GetOutboundHandler(self) -> Handler.Handler:
-		return self.GetOutboundConnector().Connect()
-
-	def GetPollInterval(self) -> float:
-		raise NotImplementedError('GetPollInterval() is not implemented')
-
-	def IsServerTerminated(self) -> bool:
-		raise NotImplementedError('IsServerTerminated() is not implemented')
+	server: _Server
 
 	def setup(self) -> None:
 		super(TCPHandler, self).setup()
 
-		self.pollInterval = self.GetPollInterval()
-		self.outHandler = self.GetOutboundHandler()
+		self.pollInterval = self.server.handlerPollInterval
+		self.outHandler = self.server.handlerConnector.Connect()
 		self.readSize = 4096
 		self.cltAddrStr = f'{self.client_address[0]}:{self.client_address[1]}'
 
@@ -47,7 +41,7 @@ class TCPHandler(socketserver.StreamRequestHandler):
 				selector.register(self.request, selectors.EVENT_READ)
 				selector.register(self.outHandler, selectors.EVENT_READ)
 
-				while not self.IsServerTerminated():
+				while not self.server.terminateEvent.is_set():
 					for key, events in selector.select(self.pollInterval):
 						if key.fileobj == self.request:
 							# client sent some data
@@ -55,7 +49,7 @@ class TCPHandler(socketserver.StreamRequestHandler):
 							data = self.request.recv(self.readSize)
 							if not data:
 								# client closed the connection
-								self.server.logger.debug(
+								self.server.handlerLogger.debug(
 									f'Client {self.cltAddrStr} closed the connection'
 								)
 								return
@@ -67,7 +61,7 @@ class TCPHandler(socketserver.StreamRequestHandler):
 							data = self.outHandler.recv(self.readSize)
 							if not data:
 								# server closed the connection
-								self.server.logger.debug(
+								self.server.handlerLogger.debug(
 									f'Server {self.outHandler.getpeername()} closed the connection'
 								)
 								return
@@ -76,76 +70,42 @@ class TCPHandler(socketserver.StreamRequestHandler):
 						else:
 							raise ValueError('Unknown file object')
 		except Exception as e:
-			self.server.logger.error(
+			self.server.handlerLogger.error(
 				f'Handler for {self.cltAddrStr} failed with error: {e}'
 			)
 
 	def finish(self) -> None:
 		self.outHandler.close()
-		self.server.logger.debug(f'Finishing {self.cltAddrStr} handler')
+		self.server.handlerLogger.debug(f'Finishing {self.cltAddrStr} handler')
 		super(TCPHandler, self).finish()
 
 
-def _GetAddrFamByHost(host: str) -> int:
-	ipAddr = ipaddress.ip_address(host)
-	if ipAddr.version == 4:
-		return socket.AF_INET
-	elif ipAddr.version == 6:
-		return socket.AF_INET6
-	else:
-		raise ValueError('Unsupported IP version')
+@FromPySocketServer
+class TCPServerV4(socketserver.ThreadingTCPServer):
+	address_family = socket.AF_INET
 
 
-def CreateTCPServer(
-	host: str,
-	port: int,
-	outboundConnector: Handler.HandlerConnector,
-	pollInterval: float = 0.5
-) -> socketserver.ThreadingTCPServer:
-	terminatingSignal = threading.Event()
+@FromPySocketServer
+class TCPServerV6(socketserver.ThreadingTCPServer):
+	address_family = socket.AF_INET6
 
-	class TerminatableTCPHandler(TCPHandler):
-		IS_SERVER_TERMINATED = terminatingSignal
-		OUTBOUND_CONNECTOR = outboundConnector
-		POLL_INTERVAL = pollInterval
 
-		def GetOutboundConnector(self) -> Handler.HandlerConnector:
-			return self.OUTBOUND_CONNECTOR
+class TCP:
 
-		def GetPollInterval(self) -> float:
-			return self.POLL_INTERVAL
+	@classmethod
+	def CreateServer(
+		cls,
+		address: _IP_ADDRESS_TYPES,
+		port: int,
+		handlerConnector: Handler.HandlerConnector,
+	) -> _Server:
 
-		def IsServerTerminated(self) -> bool:
-			return self.IS_SERVER_TERMINATED.is_set()
-
-	class TCPServer(socketserver.ThreadingTCPServer):
-		address_family = _GetAddrFamByHost(host)
-
-		IS_SERVER_TERMINATED = terminatingSignal
-
-		def __init__(
-			self,
-			server_address,
-			RequestHandlerClass,
-			bind_and_activate=True
-		):
-			self.svrAddrStr = f'{server_address[0]}:{server_address[1]}'
-			self.logger = logging.getLogger(
-				f'{__name__}.{self.__class__.__name__}.{self.svrAddrStr}'
-			)
-
-			super(TCPServer, self).__init__(
-				server_address=server_address,
-				RequestHandlerClass=RequestHandlerClass,
-				bind_and_activate=bind_and_activate
-			)
-
-		def serve_forever(self, poll_interval=pollInterval):
-			super(TCPServer, self).serve_forever(poll_interval=poll_interval)
-
-		def shutdown(self) -> None:
-			self.IS_SERVER_TERMINATED.set()
-			super(TCPServer, self).shutdown()
-
-	return TCPServer((host, port), TerminatableTCPHandler)
+		return _CreateServer(
+			address=address,
+			port=port,
+			handlerConnector=handlerConnector,
+			handlerType=TCPHandler,
+			serverV4Type=TCPServerV4,
+			serverV6Type=TCPServerV6,
+		)
 

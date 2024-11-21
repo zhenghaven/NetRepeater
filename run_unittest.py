@@ -8,10 +8,15 @@
 ###
 
 
-__version__ = '0.1.2'
+import logging
 
-PKG_AUTHOR = 'Haofan Zheng'
-PKG_NAME = 'NetRepeater'
-PKG_DESCRIPTION = 'A simple networking data forwarder'
-PKG_LICENSE = 'MIT'
+from tests.unittesting import main
+
+
+if __name__ == '__main__':
+	logging.basicConfig(
+		level=logging.DEBUG,
+		format='\t%(asctime)s %(name)s[%(levelname)s]: %(message)s',
+	)
+	main()
 

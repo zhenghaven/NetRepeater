@@ -7,17 +7,3 @@
 # https://opensource.org/licenses/MIT.
 ###
 
-
-import typing
-
-from . import TCP, Handler
-
-
-OUTBOUND_CONNECTOR_MAP : typing.Dict[str, Handler.HandlerConnector] = {
-	'tcp': TCP.TCPConnector
-}
-
-
-def FindOutboundConnector(proto: str) -> Handler.HandlerConnector:
-	return OUTBOUND_CONNECTOR_MAP.get(proto)
-

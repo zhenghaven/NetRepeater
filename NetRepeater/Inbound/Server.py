@@ -7,3 +7,14 @@
 # https://opensource.org/licenses/MIT.
 ###
 
+
+from ModularDNS.Server.Server import Server as _BaseServer
+
+from ..Outbound import Handler
+
+
+class Server(_BaseServer):
+
+	handlerPollInterval : float
+	handlerConnector    : Handler.HandlerConnector
+
