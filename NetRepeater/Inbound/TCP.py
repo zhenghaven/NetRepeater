@@ -12,8 +12,6 @@ import selectors
 import socket
 import socketserver
 
-from typing import Tuple
-
 from  ModularDNS.Server.Server import FromPySocketServer
 
 from ..Outbound import Handler
@@ -21,7 +19,6 @@ from .Server import Server as _Server
 from .Utils import (
 	_IP_ADDRESS_TYPES,
 	CreateServer as _CreateServer,
-	FromModDNSServer,
 )
 
 
@@ -83,13 +80,11 @@ class TCPHandler(socketserver.StreamRequestHandler):
 		super(TCPHandler, self).finish()
 
 
-@FromModDNSServer
 @FromPySocketServer
 class TCPServerV4(socketserver.ThreadingTCPServer):
 	address_family = socket.AF_INET
 
 
-@FromModDNSServer
 @FromPySocketServer
 class TCPServerV6(socketserver.ThreadingTCPServer):
 	address_family = socket.AF_INET6

@@ -12,8 +12,6 @@ import ipaddress
 import selectors
 import socket
 import socketserver
-import threading
-import uuid
 
 from typing import List, Union
 
@@ -27,16 +25,14 @@ _IP_ADDRESS_TYPES = Union[ipaddress.IPv4Address, ipaddress.IPv6Address]
 class MockTCPServerV4(socketserver.ThreadingTCPServer):
 	address_family = socket.AF_INET
 
-	def ServerTestInit(self, testByteRecv: List[int]) -> None:
-		self.testByteRecv = testByteRecv
+	testByteRecv: List[int]
 
 
 @FromPySocketServer
 class MockTCPServerV6(socketserver.ThreadingTCPServer):
 	address_family = socket.AF_INET6
 
-	def ServerTestInit(self, testByteRecv: List[int]) -> None:
-		self.testByteRecv = testByteRecv
+	testByteRecv: List[int]
 
 
 class MockTCPHandler(socketserver.StreamRequestHandler):
@@ -81,8 +77,6 @@ def CreateMockTCPServer(
 	address: _IP_ADDRESS_TYPES,
 	testByteRecv: List[int],
 ) -> MockTCPServerV6:
-	mockServerUUID = uuid.uuid4()
-	mockServerTerminateEvent = threading.Event()
 
 	if address.version == 4:
 		serverCls = MockTCPServerV4
@@ -95,8 +89,9 @@ def CreateMockTCPServer(
 		(str(address), 0),
 		MockTCPHandler,
 	)
-	mockServer.ServerInit(mockServerUUID, mockServerTerminateEvent)
-	mockServer.ServerTestInit(testByteRecv)
+	mockServer.ServerInit({
+		'testByteRecv': testByteRecv,
+	})
 
 	return mockServer
 

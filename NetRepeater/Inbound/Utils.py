@@ -9,14 +9,9 @@
 
 
 import ipaddress
-import logging
 import socketserver
-import threading
-import uuid
 
-from typing import Tuple, Type, Union
-
-from ModularDNS.Server.Server import Server as _ModDNSServer
+from typing import Type, Union
 
 from ..Outbound import Handler
 from .Server import Server as _Server
@@ -41,47 +36,11 @@ def CreateServer(
 	}
 	serverType = serverTypeMap[address.version]
 
-	serverUUID = uuid.uuid4()
-	terminateEvent = threading.Event()
-
-	handlerName = \
-		f'{handlerType.__name__}_S[{address}]:{port}-{serverUUID.hex[:8]}'
-	loggerName = f'{__name__}.{handlerName}'
-
-	handlerLogger = logging.getLogger(loggerName)
-
 	serverInst = serverType((str(address), port), handlerType)
-	serverInst.ServerInit(serverUUID, terminateEvent)
-	serverInst.ServerHandlerInit(
-		handlerConnector=handlerConnector,
-		handlerPollInterval=handlerPollInterval,
-		handlerLogger=handlerLogger,
-	)
+	serverInst.ServerInit({
+		'handlerPollInterval': handlerPollInterval,
+		'handlerConnector': handlerConnector,
+	})
 
 	return serverInst
-
-
-def FromModDNSServer(oriCls: Type[_ModDNSServer]) -> Type[_Server]:
-
-	def ServerHandlerInit(
-		self,
-		handlerConnector    : Handler.HandlerConnector,
-		handlerLogger       : logging.Logger,
-		handlerPollInterval : float = 0.5,
-	) -> None:
-		self.handlerConnector    = handlerConnector
-		self.handlerLogger       = handlerLogger
-		self.handlerPollInterval = handlerPollInterval
-
-	clsName = f'NetRepeater_{oriCls.__name__}'
-
-	cls = type(
-		clsName,
-		(oriCls,),
-		{
-			'ServerHandlerInit': ServerHandlerInit,
-		}
-	)
-
-	return cls
 
