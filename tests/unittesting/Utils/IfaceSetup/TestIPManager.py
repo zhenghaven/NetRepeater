@@ -28,7 +28,7 @@ class TestIPManager(unittest.TestCase):
 
 		ipMgr = CreateIPManager(
 			mode='linux-dry-run',
-			ipAndNet=ipaddress.ip_interface('fd00:1234:5678::1/64'),
+			ipAndNet=ipaddress.ip_interface('::1/128'),
 			iface='eth0',
 		)
 
@@ -43,4 +43,16 @@ class TestIPManager(unittest.TestCase):
 
 		ipMgr.RemoveIP(waitConfirm=True)
 		self.assertFalse(ipMgr.HasIPAdded())
+
+	def test_Utils_IfaceSetup_IPManager_02BindToInvalidIP(self):
+		logging.getLogger().info('')
+
+		ipMgr = CreateIPManager(
+			mode='linux-dry-run',
+			ipAndNet=ipaddress.ip_interface('fd00:0123:4567:89ab:cdef:ffff:0000:1/128'),
+			iface='eth0',
+		)
+
+		with self.assertRaises(TimeoutError):
+			ipMgr.WaitBindable(timeout=0.5)
 

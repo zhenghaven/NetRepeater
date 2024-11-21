@@ -70,9 +70,10 @@ class TCPHandler(socketserver.StreamRequestHandler):
 						else:
 							raise ValueError('Unknown file object')
 		except Exception as e:
-			self.server.handlerLogger.error(
+			self.server.handlerLogger.debug(
 				f'Handler for {self.cltAddrStr} failed with error: {e}'
 			)
+			pass
 
 	def finish(self) -> None:
 		self.outHandler.close()
