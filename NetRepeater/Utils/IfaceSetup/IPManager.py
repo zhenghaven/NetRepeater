@@ -10,6 +10,7 @@
 
 import ipaddress
 import logging
+import socket
 import subprocess
 import sys
 import time
@@ -24,7 +25,31 @@ _IP_INTERFACE_TYPES = Union[ ipaddress.IPv4Interface, ipaddress.IPv6Interface ]
 
 class IPManager(object):
 
-	_DEFAULT_POLL_INTERVAL = 0.1
+	_DEFAULT_ADD_RM_POLL_INTERVAL = 0.1
+	_DEFAULT_BINDABLE_POLL_INTERVAL = 0.5
+
+	@classmethod
+	def IsIPBindable(
+		cls,
+		ip: _IP_ADDRESS_TYPES,
+		logger: Union[logging.Logger, None] = None,
+	) -> bool:
+		if ip.version == 4:
+			af = socket.AF_INET
+		elif ip.version == 6:
+			af = socket.AF_INET6
+		else:
+			raise ValueError(f'Unknown IP address version: {ip.version}')
+
+		with socket.socket(af, socket.SOCK_STREAM) as s:
+			logger.debug(f'Attempting to bind IP {ip} to socket')
+			try:
+				s.bind((str(ip), 0))
+				# at this point, we have bound the socket with the IP
+				return True
+			except Exception:
+				# `bind()` failed
+				return False
 
 	@classmethod
 	def HasInterfaceIP(
@@ -51,20 +76,19 @@ class IPManager(object):
 		return False
 
 	@classmethod
-	def WaitInterfaceIP(
+	def WaitForCondition(
 		cls,
-		ip: _IP_ADDRESS_TYPES,
-		iface: str,
-		condition: Callable[[_IP_ADDRESS_TYPES, str], bool],
+		condition: Callable[[], bool],
 		timeout: float,
-		pollInterval: float = _DEFAULT_POLL_INTERVAL,
+		pollInterval: float,
+		timeoutMsg: str = 'Waiting for condition timed out',
 	) -> None:
 		startTime = time.time()
 		while (time.time() - startTime) < timeout:
-			if condition(ip, iface):
+			if condition():
 				return
 			time.sleep(pollInterval)
-		raise TimeoutError(f'Waiting for IP {ip} on interface {iface} timed out')
+		raise TimeoutError(timeoutMsg)
 
 	@classmethod
 	def WaitInterfaceIPAdded(
@@ -72,18 +96,17 @@ class IPManager(object):
 		ip: _IP_ADDRESS_TYPES,
 		iface: str,
 		timeout: float,
-		pollInterval: float = _DEFAULT_POLL_INTERVAL,
+		pollInterval: float = _DEFAULT_ADD_RM_POLL_INTERVAL,
 		logger: Union[logging.Logger, None] = None,
 	) -> None:
-		def _HasInterfaceIP(ip: _IP_ADDRESS_TYPES, iface: str) -> bool:
+		def _HasInterfaceIP() -> bool:
 			return cls.HasInterfaceIP(ip, iface, logger=logger)
 
-		cls.WaitInterfaceIP(
-			ip=ip,
-			iface=iface,
+		cls.WaitForCondition(
 			condition=_HasInterfaceIP,
 			timeout=timeout,
 			pollInterval=pollInterval,
+			timeoutMsg=f'IP {ip} not added to interface {iface} within {timeout} seconds',
 		)
 
 	@classmethod
@@ -92,18 +115,35 @@ class IPManager(object):
 		ip: _IP_ADDRESS_TYPES,
 		iface: str,
 		timeout: float,
-		pollInterval: float = _DEFAULT_POLL_INTERVAL,
+		pollInterval: float = _DEFAULT_ADD_RM_POLL_INTERVAL,
 		logger: Union[logging.Logger, None] = None,
 	) -> None:
-		def _HasNotInterfaceIP(ip: _IP_ADDRESS_TYPES, iface: str) -> bool:
+		def _HasNotInterfaceIP() -> bool:
 			return not cls.HasInterfaceIP(ip, iface, logger=logger)
 
-		cls.WaitInterfaceIP(
-			ip=ip,
-			iface=iface,
+		cls.WaitForCondition(
 			condition=_HasNotInterfaceIP,
 			timeout=timeout,
 			pollInterval=pollInterval,
+			timeoutMsg=f'IP {ip} not removed from interface {iface} within {timeout} seconds',
+		)
+
+	@classmethod
+	def WaitIPBindable(
+		cls,
+		ip: _IP_ADDRESS_TYPES,
+		timeout: float,
+		pollInterval: float = _DEFAULT_BINDABLE_POLL_INTERVAL,
+		logger: Union[logging.Logger, None] = None,
+	) -> None:
+		def _IsIPBindable() -> bool:
+			return cls.IsIPBindable(ip, logger=logger)
+
+		cls.WaitForCondition(
+			condition=_IsIPBindable,
+			timeout=timeout,
+			pollInterval=pollInterval,
+			timeoutMsg=f'IP {ip} not bindable within {timeout} seconds',
 		)
 
 	def __init__(
@@ -147,7 +187,7 @@ class IPManager(object):
 	def WaitIPAdded(
 		self,
 		timeout: float,
-		pollInterval: float = _DEFAULT_POLL_INTERVAL,
+		pollInterval: float = _DEFAULT_ADD_RM_POLL_INTERVAL,
 	) -> None:
 		self.WaitInterfaceIPAdded(
 			ip=self.ipAndNet.ip,
@@ -160,7 +200,7 @@ class IPManager(object):
 	def WaitIPRemoved(
 		self,
 		timeout: float,
-		pollInterval: float = _DEFAULT_POLL_INTERVAL,
+		pollInterval: float = _DEFAULT_ADD_RM_POLL_INTERVAL,
 	) -> None:
 		self.WaitInterfaceIPRemoved(
 			ip=self.ipAndNet.ip,
@@ -170,9 +210,17 @@ class IPManager(object):
 			logger=self.logger,
 		)
 
-	def DelayAfterAdd(self, delay: Union[float, None] = None) -> None:
-		if delay:
-			time.sleep(delay)
+	def WaitBindable(
+		self,
+		timeout: float,
+		pollInterval: float = _DEFAULT_BINDABLE_POLL_INTERVAL,
+	) -> None:
+		self.WaitIPBindable(
+			ip=self.ipAndNet.ip,
+			timeout=timeout,
+			pollInterval=pollInterval,
+			logger=self.logger,
+		)
 
 
 class IPManagerLinux(IPManager):
@@ -242,6 +290,8 @@ class IPManagerLinux(IPManager):
 		self._RunSysCmdToAddIP(self.ipAndNet, self.iface)
 		if waitConfirm:
 			self.WaitIPAdded(timeout=5.0)
+			# wait to ensure the address is bindable
+			self.WaitBindable(timeout=5.0)
 
 	def RemoveIP(
 		self,
@@ -256,12 +306,6 @@ class IPManagerLinux(IPManager):
 		self._RunSysCmdToRemoveIP(self.ipAndNet, self.iface)
 		if waitConfirm:
 			self.WaitIPRemoved(timeout=5.0)
-
-	def DelayAfterAdd(self, delay: Union[float, None] = None) -> None:
-		if delay:
-			time.sleep(delay)
-		else:
-			time.sleep(0.5)
 
 
 class IPManagerLinuxDryRun(IPManagerLinux):
