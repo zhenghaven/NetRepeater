@@ -16,6 +16,8 @@ import unittest
 
 from typing import List
 
+import dns.message
+import dns.name
 import dns.rdata
 import dns.rdataclass
 import dns.rdatatype
@@ -120,6 +122,51 @@ class TestNetRepeaterMod(unittest.TestCase):
 			# cleanup the received data
 			self.testByteRecv.clear()
 			self.assertEqual(len(self.testByteRecv), 0)
+		finally:
+			mod.Terminate()
+
+	def test_DNS_NetRepeaterMod_02RespForIPv6Only(self):
+		logging.getLogger().info('')
+
+		dCollection = DownstreamCollection()
+		dCollection.AddHandler('hosts', self.hosts)
+
+
+		# setup the DNS module
+		mod = ServerManagerMod.FromConfig(
+			dCollection=dCollection,
+			localNet='::1/128',
+			localIface='test_lo',
+			localIfaceMode='linux-dry-run',
+			protoAndPorts=[ ['tcp', 0, self.mockServer1Port] ],
+			remoteIPLookup='s:hosts',
+			serverTTL=[1, 'd'],
+		)
+
+		try:
+			query = dns.message.make_query(
+				qname='localhostV6',
+				rdtype=dns.rdatatype.A,
+				rdclass=dns.rdataclass.IN,
+			)
+
+			resp = mod.Handle(
+				query,
+				senderAddr=('localhost', 0),
+				recDepthStack=[],
+			)
+
+			self.assertEqual(len(resp.answer), 0)
+			self.assertEqual(len(resp.additional), 1)
+			self.assertEqual(resp.additional[0].name, dns.name.from_text('localhostV6'))
+			self.assertEqual(resp.additional[0].rdclass, dns.rdataclass.IN)
+			self.assertEqual(resp.additional[0].rdtype, dns.rdatatype.AAAA)
+			items = [ x for x in resp.additional[0].items ]
+			self.assertEqual(len(items), 1)
+			self.assertEqual(
+				ipaddress.ip_address(items[0].address),
+				self.localhostAddrV6
+			)
 		finally:
 			mod.Terminate()
 
