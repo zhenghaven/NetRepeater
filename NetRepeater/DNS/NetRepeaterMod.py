@@ -22,6 +22,7 @@ from ModularDNS.Downstream.DownstreamCollection import (
 	DownstreamCollection as _DNSDownstreamCollection
 )
 from ModularDNS.Downstream.QuickLookup import QuickLookup as _BaseQuickLookup
+from ModularDNS.MsgEntry.AddEntry import AddEntry as _DNSAddEntry
 from ModularDNS.MsgEntry.AnsEntry import AnsEntry as _DNSAnsEntry
 from ModularDNS.MsgEntry.MsgEntry import MsgEntry as _DNSMsgEntry
 from ModularDNS.MsgEntry.QuestionEntry import QuestionEntry as _DNSQuestionEntry
@@ -143,16 +144,16 @@ class ServerManagerMod(_BaseQuickLookup):
 		if msgEntry.rdCls != dns.rdataclass.IN:
 			# we don't support other classes
 			self._logger.debug(f'Unsupported class: {dns.rdataclass.to_text(msgEntry.rdCls)}')
-			raise _DNSExceptions.DNSNameNotFoundError(domain, 'NetRepeaterMod')
+			raise _DNSExceptions.DNSZeroAnswerError(domain)
 
 		if msgEntry.rdType not in [dns.rdatatype.A, dns.rdatatype.AAAA]:
 			# we don't support other types
 			self._logger.debug(f'Unsupported type: {dns.rdatatype.to_text(msgEntry.rdType)}')
-			raise _DNSExceptions.DNSNameNotFoundError(domain, 'NetRepeaterMod')
+			raise _DNSExceptions.DNSZeroAnswerError(domain)
 
 		repeaterIP = self._serverManager.LookupOrCreateServer(domain)
 
-		ans = _DNSAnsEntry(
+		respEntry = _DNSAnsEntry(
 			name=msgEntry.name,
 			rdCls=msgEntry.rdCls,
 			rdType=self._supportedRDType,
@@ -165,8 +166,11 @@ class ServerManagerMod(_BaseQuickLookup):
 			],
 			ttl=self._ansTTL,
 		)
+		if msgEntry.rdType != self._supportedRDType:
+			# it's not answering the asked IP version
+			respEntry = _DNSAddEntry.FromMsgEntry(respEntry)
 
-		return [ ans ]
+		return [ respEntry ]
 
 	def Terminate(self) -> None:
 		self._serverManager.Terminate()
