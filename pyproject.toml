@@ -1,6 +1,6 @@
 [project]
 name            = "NetRepeater"
-version         = "1.2.1"
+version         = "1.2.2"
 authors         = [
 	{ name = "Haofan Zheng" },
 ]
@@ -11,7 +11,7 @@ requires-python = ">=3.13"
 dependencies = [
 	'netifaces >= 0.11.0',
 	'ModularDNS @ git+https://github.com/zhenghaven/ModularDNS.git@v0.4.0',
-	'PyNetworkLib @ git+https://github.com/zhenghaven/PyNetworkLib.git@v0.0.6',
+	'PyNetworkLib @ git+https://github.com/zhenghaven/PyNetworkLib.git@v0.0.7',
 ]
 
 [project.urls]
