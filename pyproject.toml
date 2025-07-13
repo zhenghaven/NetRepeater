@@ -7,7 +7,7 @@ authors         = [
 description     = "A simple networking data forwarder"
 readme          = "README.md"
 license         = {file = "LICENSE"}
-requires-python = ">=3.9"
+requires-python = ">=3.13"
 dependencies = [
 	'netifaces >= 0.11.0',
 	'ModularDNS @ git+https://github.com/zhenghaven/ModularDNS.git@v0.4.0',
