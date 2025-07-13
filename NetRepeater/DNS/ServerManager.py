@@ -20,7 +20,7 @@ from CacheLib.TTL.MultiKeyUniTTLValueCache import MultiKeyUniTTLValueCache
 from ModularDNS.Downstream.QuickLookup import QuickLookup as _IPAddrLookup
 
 from ..Inbound.FindCreator import FindServerCreator
-from ..Inbound.Server import Server
+from ..Inbound.LegacyServer import Server
 from ..Outbound.FindCreator import FindConnector
 from ..Outbound.Handler import HandlerConnector
 from ..Utils.IfaceSetup.IPManager import CreateIPManager

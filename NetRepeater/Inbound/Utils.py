@@ -14,7 +14,7 @@ import socketserver
 from typing import Type, Union
 
 from ..Outbound import Handler
-from .Server import Server as _Server
+from .LegacyServer import Server as _Server
 
 
 _IP_ADDRESS_TYPES = Union[ ipaddress.IPv4Address, ipaddress.IPv6Address ]

@@ -15,7 +15,7 @@ import socketserver
 from  ModularDNS.Server.Server import FromPySocketServer
 
 from ..Outbound import Handler
-from .Server import Server as _Server
+from .LegacyServer import Server as _Server
 from .Utils import (
 	_IP_ADDRESS_TYPES,
 	CreateServer as _CreateServer,

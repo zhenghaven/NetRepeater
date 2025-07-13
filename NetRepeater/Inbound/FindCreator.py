@@ -11,7 +11,7 @@
 from typing import Callable, Dict
 
 from ..Outbound.Handler import HandlerConnector
-from .Server import Server
+from .LegacyServer import Server
 from .TCP import TCP
 from .Utils import _IP_ADDRESS_TYPES
 
