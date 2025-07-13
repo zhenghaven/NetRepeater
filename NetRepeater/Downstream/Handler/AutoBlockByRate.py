@@ -29,6 +29,7 @@ class AutoBlockByRate(DownstreamHandlerBlockByRate, HandlerBase):
 		timeWindowSec: float,
 		downstreamHandler: str,
 		savedStatePath: None | os.PathLike = None,
+		logIPs: bool = False,
 	) -> 'AutoBlockByRate':
 
 		downstreamHandlerObj = handlersDict.GetHandler(downstreamHandler)
@@ -38,5 +39,6 @@ class AutoBlockByRate(DownstreamHandlerBlockByRate, HandlerBase):
 			timeWindowSec=timeWindowSec,
 			downstreamHandler=downstreamHandlerObj,
 			savedStatePath=savedStatePath,
+			logIPs=logIPs,
 		)
 
