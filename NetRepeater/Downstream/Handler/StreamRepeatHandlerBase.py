@@ -83,7 +83,7 @@ class StreamRepeatHandlerBase(DownstreamHandlerBase):
 							else:
 								raise ValueError('Unknown file object')
 			except Exception as e:
-				self.server.handlerLogger.debug(
+				pyHandler.server.handlerLogger.debug(
 					f'Handler for {pyHandler.client_address} failed with error: {e}'
 				)
 				pass
