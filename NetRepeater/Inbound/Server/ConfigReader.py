@@ -11,13 +11,15 @@
 from PyNetworkLib.Server.ServerBase import ServerBase as _ServerBase
 
 from ...Downstream.Handler.HandlerDict import HandlerDict as _DownstreamHandlerDict
-from .TCP import TCPServer
+from .HTTPS import HTTPSServer
 from .TLS import TLSServer
+from .TCP import TCPServer
 
 
 _MOD_DICT = {
-	'TCP': TCPServer,
+	'HTTPS': HTTPSServer,
 	'TLS': TLSServer,
+	'TCP': TCPServer,
 }
 
 

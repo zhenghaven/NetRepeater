@@ -15,12 +15,14 @@ from .HandlerDict import HandlerDict, HandlerModDict
 from .AutoBlockByRate import AutoBlockByRate
 from .TCPRepeatHandler import TCPRepeatHandler
 from .TLSRepeatHandler import TLSRepeatHandler
+from .HTTPLoggingHandler import HTTPLoggingHandler
 
 
 HANDLER_MOD_DICT = HandlerModDict()
 HANDLER_MOD_DICT.AddHandler('auto_block_by_rate', AutoBlockByRate)
 HANDLER_MOD_DICT.AddHandler('tcp_repeat', TCPRepeatHandler)
 HANDLER_MOD_DICT.AddHandler('tls_repeat', TLSRepeatHandler)
+HANDLER_MOD_DICT.AddHandler('http_logging', HTTPLoggingHandler)
 
 
 def BuildHandlerDictFromConfig(config: list[dict]) -> HandlerDict:
