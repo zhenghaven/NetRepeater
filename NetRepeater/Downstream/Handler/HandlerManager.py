@@ -12,6 +12,7 @@ import logging
 
 from .HandlerDict import HandlerDict, HandlerModDict
 
+from .AutoBlockByAllowList import AutoBlockByAllowList
 from .AutoBlockByRate import AutoBlockByRate
 from .TCPRepeatHandler import TCPRepeatHandler
 from .TLSRepeatHandler import TLSRepeatHandler
@@ -19,6 +20,7 @@ from .HTTPLoggingHandler import HTTPLoggingHandler
 
 
 HANDLER_MOD_DICT = HandlerModDict()
+HANDLER_MOD_DICT.AddHandler('auto_block_by_allow_list', AutoBlockByAllowList)
 HANDLER_MOD_DICT.AddHandler('auto_block_by_rate', AutoBlockByRate)
 HANDLER_MOD_DICT.AddHandler('tcp_repeat', TCPRepeatHandler)
 HANDLER_MOD_DICT.AddHandler('tls_repeat', TLSRepeatHandler)
